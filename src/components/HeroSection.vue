@@ -1,7 +1,7 @@
 <template>
   <div class="hero-section">
     <div class="hero-content">
-      <h1>Aici se dezvolta proiectul Rianei</h1>
+      <h1>Aici se dezvolta proiectul lui Dan</h1>
     </div>
   </div>
 </template>
