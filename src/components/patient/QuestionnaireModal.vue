@@ -322,15 +322,21 @@
       isQuestionVisible(question) {
         if (!question.conditie) return true
         
+        // Evaluează condiția în mod sigur
+        const evaluateCondition = (condition, responses) => {
+          const parts = condition.split('===')
+          if (parts.length !== 2) return true
+          
+          const key = parts[0].trim()
+          const value = parts[1].trim().replace(/['"]/g, '')
+          return responses[key] === value
+        }
+        
         try {
-          // Evaluează condiția simplu (ex: "fumat === 'DA'")
-          const condition = question.conditie.replace(/'/g, '"')
-          const result = eval(condition.replace(/(\w+)/g, (match) => 
-            `"${this.responses[match] || ''}"`
-          ))
-          return result
+          return evaluateCondition(question.conditie, this.responses)
         } catch (e) {
-          return true // În caz de eroare, arată întrebarea
+          console.error('Error evaluating condition:', e)
+          return true
         }
       },
       

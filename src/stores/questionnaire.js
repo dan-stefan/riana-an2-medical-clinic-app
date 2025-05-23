@@ -28,12 +28,18 @@ export const useQuestionnaireStore = defineStore('questionnaire', {
           
           // Verifică condițiile pentru întrebări condiționale
           if (intrebare.conditie) {
-            // Evaluează condiția simplu (ex: "fumat === 'DA'")
-            const condition = intrebare.conditie.replace(/'/g, '"')
+            // Evaluează condiția în mod sigur
+            const evaluateCondition = (condition, responses) => {
+              const parts = condition.split('===')
+              if (parts.length !== 2) return true
+              
+              const key = parts[0].trim()
+              const value = parts[1].trim().replace(/['"]/g, '')
+              return responses[key] === value
+            }
+            
             try {
-              const result = eval(condition.replace(/(\w+)/g, (match) => 
-                `"${state.responses[match] || ''}"`
-              ))
+              const result = evaluateCondition(intrebare.conditie, state.responses)
               if (!result) return true // Întrebarea nu e aplicabilă
             } catch (e) {
               return true // În caz de eroare, consideră întrebarea opțională
