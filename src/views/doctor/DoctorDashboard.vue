@@ -1,99 +1,186 @@
 <template>
-    <div class="doctor-dashboard">
-      <header class="dashboard-header">
-        <h1>Dashboard Medic</h1>
-        <div class="user-info">
-          <span>Dr. {{ authStore.userProfile?.nume_complet }}</span>
-          <button @click="logout" class="logout-btn">Deconectare</button>
+  <div class="doctor-dashboard">
+    <header class="dashboard-header">
+      <h1>Dashboard Medic</h1>
+      <div class="user-info">
+        <span>Dr. {{ authStore.userProfile?.nume_complet }}</span>
+        <button @click="logout" class="logout-btn">Deconectare</button>
+      </div>
+    </header>
+
+    <div class="dashboard-content">
+      <div class="welcome-card">
+        <h2>Bine ai venit, Doctore!</h2>
+        <p>Aici vei putea vizualiza și analiza datele medicale ale pacienților tăi.</p>
+      </div>
+
+      <div class="quick-actions">
+        <div class="action-card">
+          <h3>Pacienți</h3>
+          <p>Vezi lista pacienților și datele lor medicale</p>
+          <button @click="viewPatients" class="action-btn">Gestionează Pacienți</button>
         </div>
-      </header>
-  
-      <div class="dashboard-content">
-        <div class="welcome-card">
-          <h2>Bine ai venit, Doctore!</h2>
-          <p>Aici vei putea vizualiza și analiza datele medicale ale pacienților tăi.</p>
-        </div>
-  
-        <div class="quick-actions">
-          <div class="action-card">
-            <h3>Pacienți</h3>
-            <p>Vezi lista pacienților și datele lor medicale</p>
-            <button class="action-btn">Gestionează Pacienți</button>
-          </div>
-          
-          <div class="action-card">
-            <h3>Rapoarte</h3>
-            <p>Generează rapoarte și statistici</p>
-            <button class="action-btn">Generează Rapoarte</button>
-          </div>
+        
+        <div class="action-card">
+          <h3>Rapoarte</h3>
+          <p>Generează rapoarte și statistici</p>
+          <button class="action-btn">Generează Rapoarte</button>
         </div>
       </div>
     </div>
-  </template>
-  
-  <script>
-  import { useAuthStore } from '@/stores/auth.js'
-  
-  export default {
-    name: 'DoctorDashboard',
-    computed: {
-      authStore() {
-        return useAuthStore()
+
+    <!-- Modal pentru gestionarea pacienților -->
+    <Pacienti 
+      :show="showPatients"
+      @close="showPatients = false"
+      @patient-selected="onPatientSelected"
+    />
+
+    <!-- Modal pentru detaliile pacientului -->
+    <PatientDetails 
+      :show="showPatientDetails"
+      :selected-patient="selectedPatient"
+      @close="showPatientDetails = false"
+    />
+
+    <!-- Notificări Toast -->
+    <div v-if="notifications.length > 0" class="notifications-container">
+      <div 
+        v-for="notification in notifications"
+        :key="notification.id"
+        :class="['notification', `notification-${notification.type}`]"
+        @click="removeNotification(notification.id)"
+      >
+        <span class="notification-icon">{{ getNotificationIcon(notification.type) }}</span>
+        <span class="notification-message">{{ notification.message }}</span>
+        <button class="notification-close">✕</button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import { useAuthStore } from '@/stores/auth.js'
+import Pacienti from '@/components/doctor/Pacienti.vue'
+import PatientDetails from '@/components/doctor/PatientDetails.vue'
+
+export default {
+  name: 'DoctorDashboard',
+  components: {
+    Pacienti,
+    PatientDetails
+  },
+  data() {
+    return {
+      showPatients: false,
+      showPatientDetails: false,
+      selectedPatient: null,
+      notifications: [],
+      notificationId: 0
+    }
+  },
+  computed: {
+    authStore() {
+      return useAuthStore()
+    }
+  },
+  methods: {
+    async logout() {
+      const success = await this.authStore.signOut()
+      if (success) {
+        this.$router.push('/auth')
       }
     },
-    methods: {
-      async logout() {
-        const success = await this.authStore.signOut()
-        if (success) {
-          this.$router.push('/auth')
-        }
+
+    viewPatients() {
+      this.showPatients = true
+    },
+
+    onPatientSelected(patient) {
+      this.selectedPatient = patient
+      this.showPatients = false
+      this.showPatientDetails = true
+      this.showNotification(`Afișare detalii pentru ${patient.nume_complet}`, 'info')
+    },
+
+    showNotification(message, type = 'info', duration = 5000) {
+      const id = ++this.notificationId
+      const notification = {
+        id,
+        message,
+        type,
+        timestamp: Date.now()
       }
+      
+      this.notifications.push(notification)
+      
+      setTimeout(() => {
+        this.removeNotification(id)
+      }, duration)
+    },
+
+    removeNotification(id) {
+      const index = this.notifications.findIndex(n => n.id === id)
+      if (index > -1) {
+        this.notifications.splice(index, 1)
+      }
+    },
+
+    getNotificationIcon(type) {
+      const icons = {
+        'success': '✅',
+        'error': '❌',
+        'warning': '⚠️',
+        'info': 'ℹ️'
+      }
+      return icons[type] || 'ℹ️'
     }
   }
-  </script>
-  
-  <style scoped>
-  .doctor-dashboard {
-    /* Full screen layout ca AuthPage */
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background-color: #f5f5f5;
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
-    box-sizing: border-box;
-  }
-  
-  .dashboard-header {
-    background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
-    color: white;
-    padding: clamp(15px, 3vw, 25px);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
-    /* Header rămâne fix în partea de sus */
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    flex-shrink: 0;
-  }
-  
-  .dashboard-header h1 {
-    margin: 0;
-    font-size: clamp(20px, 4vw, 28px);
-    color: white;
-  }
-  
-  .user-info {
-    display: flex;
-    align-items: center;
-    gap: clamp(10px, 2vw, 20px);
-    font-size: clamp(14px, 2.5vw, 16px);
-  }
+}
+</script>
+
+<style scoped>
+.doctor-dashboard {
+  /* Full screen layout ca AuthPage */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: #f5f5f5;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.dashboard-header {
+  background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+  color: white;
+  padding: clamp(15px, 3vw, 25px);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+  /* Header rămâne fix în partea de sus */
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  flex-shrink: 0;
+}
+
+.dashboard-header h1 {
+  margin: 0;
+  font-size: clamp(20px, 4vw, 28px);
+  color: white;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: clamp(10px, 2vw, 20px);
+  font-size: clamp(14px, 2.5vw, 16px);
+}
   
   .logout-btn {
     padding: clamp(8px, 1.5vw, 12px) clamp(12px, 2.5vw, 20px);
