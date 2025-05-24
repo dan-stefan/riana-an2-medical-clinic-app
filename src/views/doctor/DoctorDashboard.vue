@@ -24,7 +24,13 @@
         <div class="action-card">
           <h3>Rapoarte</h3>
           <p>Generează rapoarte și statistici</p>
-          <button class="action-btn">Generează Rapoarte</button>
+          <button @click="viewReports" class="action-btn">Generează Rapoarte</button>
+        </div>
+
+        <div class="action-card">
+          <h3>Programările Mele</h3>
+          <p>Vezi și gestionează programările tale</p>
+          <button @click="viewAppointments" class="action-btn">Vezi Programările</button>
         </div>
       </div>
     </div>
@@ -41,6 +47,12 @@
       :show="showPatientDetails"
       :selected-patient="selectedPatient"
       @close="showPatientDetails = false"
+    />
+
+    <!-- Modal pentru rapoarte -->
+    <Rapoarte 
+      :show="showReports"
+      @close="showReports = false"
     />
 
     <!-- Notificări Toast -->
@@ -63,17 +75,20 @@
 import { useAuthStore } from '@/stores/auth.js'
 import Pacienti from '@/components/doctor/Pacienti.vue'
 import PatientDetails from '@/components/doctor/PatientDetails.vue'
+import Rapoarte from '@/components/doctor/Rapoarte.vue'
 
 export default {
   name: 'DoctorDashboard',
   components: {
     Pacienti,
-    PatientDetails
+    PatientDetails,
+    Rapoarte
   },
   data() {
     return {
       showPatients: false,
       showPatientDetails: false,
+      showReports: false,
       selectedPatient: null,
       notifications: [],
       notificationId: 0
@@ -94,6 +109,14 @@ export default {
 
     viewPatients() {
       this.showPatients = true
+    },
+
+    viewReports() {
+      this.showReports = true
+    },
+
+    viewAppointments() {
+      this.showNotification('Funcționalitatea programărilor va fi disponibilă în curând! 🗓️', 'info')
     },
 
     onPatientSelected(patient) {
@@ -181,134 +204,239 @@ export default {
   gap: clamp(10px, 2vw, 20px);
   font-size: clamp(14px, 2.5vw, 16px);
 }
-  
-  .logout-btn {
-    padding: clamp(8px, 1.5vw, 12px) clamp(12px, 2.5vw, 20px);
-    background-color: rgba(255,255,255,0.2);
-    color: white;
-    border: 1px solid rgba(255,255,255,0.3);
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: clamp(12px, 2vw, 14px);
-    transition: all 0.3s ease;
-    font-weight: 500;
+
+.logout-btn {
+  padding: clamp(8px, 1.5vw, 12px) clamp(12px, 2.5vw, 20px);
+  background-color: rgba(255,255,255,0.2);
+  color: white;
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: clamp(12px, 2vw, 14px);
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.logout-btn:hover {
+  background-color: rgba(255,255,255,0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(255,255,255,0.2);
+}
+
+.dashboard-content {
+  flex: 1;
+  padding: clamp(15px, 3vw, 30px);
+  padding-bottom: clamp(40px, 8vw, 80px);
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+  /* Permite scroll dacă conținutul e prea mare */
+  overflow-y: auto;
+}
+
+.welcome-card {
+  background: white;
+  padding: clamp(20px, 4vw, 40px);
+  border-radius: 12px;
+  margin-bottom: clamp(20px, 4vw, 40px);
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  border: 1px solid rgba(0,0,0,0.05);
+}
+
+.welcome-card h2 {
+  margin: 0 0 clamp(10px, 2vw, 20px) 0;
+  font-size: clamp(18px, 3.5vw, 24px);
+  color: #333;
+}
+
+.welcome-card p {
+  margin: 0;
+  font-size: clamp(14px, 2.5vw, 16px);
+  color: #666;
+  line-height: 1.6;
+}
+
+.quick-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: clamp(15px, 3vw, 25px);
+}
+
+.action-card {
+  background: white;
+  padding: clamp(20px, 3vw, 30px);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  border: 1px solid rgba(0,0,0,0.05);
+  transition: all 0.3s ease;
+}
+
+.action-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
+
+.action-card h3 {
+  margin: 0 0 clamp(8px, 1.5vw, 15px) 0;
+  font-size: clamp(16px, 3vw, 20px);
+  color: #333;
+}
+
+.action-card p {
+  margin: 0 0 clamp(15px, 2.5vw, 20px) 0;
+  font-size: clamp(13px, 2.2vw, 15px);
+  color: #666;
+  line-height: 1.5;
+}
+
+.action-btn {
+  padding: clamp(10px, 2vw, 15px) clamp(15px, 3vw, 25px);
+  background-color: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: clamp(14px, 2.5vw, 16px);
+  font-weight: 500;
+  transition: all 0.3s ease;
+  width: 100%;
+}
+
+.action-btn:hover {
+  background-color: #1976D2;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+}
+
+/* Notificări Toast */
+.notifications-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 400px;
+}
+
+.notification {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  animation: slideInRight 0.3s ease-out;
+  border-left: 4px solid;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
   }
-  
-  .logout-btn:hover {
-    background-color: rgba(255,255,255,0.3);
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(255,255,255,0.2);
+  to {
+    opacity: 1;
+    transform: translateX(0);
   }
-  
-  .dashboard-content {
-    flex: 1;
-    padding: clamp(15px, 3vw, 30px);
-    max-width: 1200px;
-    margin: 0 auto;
-    width: 100%;
-    box-sizing: border-box;
-    /* Permite scroll dacă conținutul e prea mare */
-    overflow-y: auto;
-  }
-  
-  .welcome-card {
-    background: white;
-    padding: clamp(20px, 4vw, 40px);
-    border-radius: 12px;
-    margin-bottom: clamp(20px, 4vw, 40px);
-    text-align: center;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    border: 1px solid rgba(0,0,0,0.05);
-  }
-  
-  .welcome-card h2 {
-    margin: 0 0 clamp(10px, 2vw, 20px) 0;
-    font-size: clamp(18px, 3.5vw, 24px);
-    color: #333;
-  }
-  
-  .welcome-card p {
-    margin: 0;
-    font-size: clamp(14px, 2.5vw, 16px);
-    color: #666;
-    line-height: 1.6;
-  }
-  
+}
+
+.notification:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.16);
+}
+
+.notification-success {
+  background: #ecfdf5;
+  border-left-color: #10b981;
+  color: #065f46;
+}
+
+.notification-error {
+  background: #fef2f2;
+  border-left-color: #ef4444;
+  color: #991b1b;
+}
+
+.notification-warning {
+  background: #fffbeb;
+  border-left-color: #f59e0b;
+  color: #92400e;
+}
+
+.notification-info {
+  background: #eff6ff;
+  border-left-color: #3b82f6;
+  color: #1e40af;
+}
+
+.notification-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.notification-message {
+  flex: 1;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.notification-close {
+  background: none;
+  border: none;
+  color: inherit;
+  opacity: 0.6;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  font-size: 14px;
+}
+
+.notification-close:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive adjustments */
+@media (min-width: 768px) {
   .quick-actions {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: clamp(15px, 3vw, 25px);
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .quick-actions {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-header {
+    flex-direction: column;
+    gap: 15px;
+    text-align: center;
   }
   
-  .action-card {
-    background: white;
-    padding: clamp(20px, 3vw, 30px);
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    border: 1px solid rgba(0,0,0,0.05);
-    transition: all 0.3s ease;
+  .user-info {
+    flex-direction: column;
+    gap: 10px;
   }
-  
-  .action-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+
+  .notifications-container {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+    max-width: none;
   }
-  
-  .action-card h3 {
-    margin: 0 0 clamp(8px, 1.5vw, 15px) 0;
-    font-size: clamp(16px, 3vw, 20px);
-    color: #333;
+
+  .notification {
+    padding: 12px 16px;
   }
-  
-  .action-card p {
-    margin: 0 0 clamp(15px, 2.5vw, 20px) 0;
-    font-size: clamp(13px, 2.2vw, 15px);
-    color: #666;
-    line-height: 1.5;
-  }
-  
-  .action-btn {
-    padding: clamp(10px, 2vw, 15px) clamp(15px, 3vw, 25px);
-    background-color: #2196F3;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: clamp(14px, 2.5vw, 16px);
-    font-weight: 500;
-    transition: all 0.3s ease;
-    width: 100%;
-  }
-  
-  .action-btn:hover {
-    background-color: #1976D2;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
-  }
-  
-  /* Responsive adjustments */
-  @media (min-width: 768px) {
-    .quick-actions {
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    }
-  }
-  
-  @media (min-width: 1024px) {
-    .quick-actions {
-      grid-template-columns: repeat(2, 1fr);
-    }
-  }
-  
-  @media (max-width: 480px) {
-    .dashboard-header {
-      flex-direction: column;
-      gap: 15px;
-      text-align: center;
-    }
-    
-    .user-info {
-      flex-direction: column;
-      gap: 10px;
-    }
-  }
-  </style>
+}
+</style>
