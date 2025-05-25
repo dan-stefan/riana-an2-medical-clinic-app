@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/auth.js'
 import AuthPage from '@/views/auth/AuthPage.vue'
 import PatientDashboard from '@/views/patient/PatientDashboard.vue'
 import DoctorDashboard from '@/views/doctor/DoctorDashboard.vue'
+import AdminDashboard from '@/views/admin/AdminDashboard.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -30,6 +31,12 @@ const router = createRouter({
       name: 'doctor-dashboard',
       component: DoctorDashboard,
       meta: { requiresAuth: true, role: 'doctor' }
+    },
+    {
+      path: '/admin/dashboard',
+      name: 'admin-dashboard',
+      component: AdminDashboard,
+      meta: { requiresAuth: true, role: 'admin' }
     }
   ]
 })
@@ -51,7 +58,9 @@ router.beforeEach(async (to, from, next) => {
     next('/auth')
   } else if (requiresGuest && authStore.isLoggedIn) {
     // Redirecționează utilizatorul logat la dashboard-ul corespunzător
-    if (authStore.isPatient) {
+    if (authStore.userProfile?.rol === 'admin') {
+      next('/admin/dashboard')
+    } else if (authStore.isPatient) {
       next('/patient/dashboard')
     } else if (authStore.isDoctor) {
       next('/doctor/dashboard')

@@ -17,7 +17,7 @@ export const useAuthStore = defineStore('auth', {
   },
 
   actions: {
-    // Înregistrare utilizator nou cu debug complet
+    // Înregistrare utilizator nou cu status pentru doctori
     async signUp(email, password, numeComplet, rol = 'patient') {
       this.loading = true
       this.error = null
@@ -50,6 +50,10 @@ export const useAuthStore = defineStore('auth', {
         if (authData.user) {
           console.log('👤 USER CREATED:', authData.user.id)
           
+          // Determină status-ul bazat pe rol
+          const userStatus = rol === 'doctor' ? 'waiting' : null
+          console.log('📋 Setting status:', userStatus)
+          
           // Așteaptă trigger-ul
           console.log('⏳ Waiting 3 seconds for trigger...')
           await new Promise(resolve => setTimeout(resolve, 3000))
@@ -64,19 +68,40 @@ export const useAuthStore = defineStore('auth', {
 
           if (userProfile) {
             console.log('✅ USER PROFILE FOUND:', userProfile)
-            this.userProfile = userProfile
+            
+            // Actualizează status-ul dacă e necesar
+            if (userProfile.status !== userStatus) {
+              console.log('🔧 Updating status to:', userStatus)
+              const { data: updatedProfile, error: updateError } = await supabase
+                .from('user_profiles')
+                .update({ status: userStatus })
+                .eq('id', authData.user.id)
+                .select()
+                .single()
+
+              if (updatedProfile) {
+                this.userProfile = updatedProfile
+                console.log('✅ Status updated:', updatedProfile)
+              } else {
+                console.log('❌ Status update failed:', updateError?.message)
+                this.userProfile = userProfile
+              }
+            } else {
+              this.userProfile = userProfile
+            }
           } else {
             console.log('❌ USER PROFILE NOT FOUND:', userError?.message)
             
-            // Încearcă crearea manuală
-            console.log('🔧 Creating profile manually...')
+            // Încearcă crearea manuală cu status corespunzător
+            console.log('🔧 Creating profile manually with status:', userStatus)
             const { data: manualProfile, error: manualError } = await supabase
               .from('user_profiles')
               .insert({
                 id: authData.user.id,
                 email: authData.user.email,
                 nume_complet: numeComplet,
-                rol: rol
+                rol: rol,
+                status: userStatus
               })
               .select()
               .single()
@@ -89,7 +114,21 @@ export const useAuthStore = defineStore('auth', {
             }
           }
 
-          // Verifică patient_profiles dacă este pacient
+          // Pentru doctori cu status 'waiting', deconectează și returnează mesaj special
+          if (rol === 'doctor' && userStatus === 'waiting') {
+            console.log('🏥 Doctor with waiting status - signing out')
+            await supabase.auth.signOut()
+            this.user = null
+            this.userProfile = null
+            
+            return { 
+              success: true, 
+              message: 'Cererea de cont doctor a fost trimisă către administrator',
+              requiresApproval: true
+            }
+          }
+
+          // Pentru pacienți, verifică patient_profiles
           if (rol === 'patient') {
             console.log('🔍 Checking patient_profiles...')
             const { data: patientProfile, error: patientError } = await supabase

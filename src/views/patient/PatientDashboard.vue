@@ -1,6 +1,7 @@
 <template>
   <div class="patient-dashboard">
     <header class="dashboard-header">
+      <img src="/img/logo/logoP.png" alt="Glowdent Logo" class="logo" />
       <h1>Dashboard Pacient</h1>
       <div class="user-info">
         <span>Bună, {{ authStore.userProfile?.nume_complet }}!</span>
@@ -577,4 +578,17 @@ export default {
       padding: 12px 16px;
     }
   }
+
+  .logo {
+  display: none; /* Hide by default */
+  width: 200px; /* Adjust width as needed */
+  height: 80px; /* Set height to crop the image further */
+  
+}
+
+@media (min-width: 768px) {
+  .logo {
+    display: block; /* Show on desktop */
+  }
+}
   </style>

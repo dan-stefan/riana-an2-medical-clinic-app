@@ -1,8 +1,10 @@
 <template>
   <div class="doctor-dashboard">
     <header class="dashboard-header">
+      <img src="/img/logo/logoD.png" alt="Glowdent Logo" class="logo" />
       <h1>Dashboard Medic</h1>
       <div class="user-info">
+        
         <span>Dr. {{ authStore.userProfile?.nume_complet }}</span>
         <button @click="logout" class="logout-btn">Deconectare</button>
       </div>
@@ -196,6 +198,7 @@ export default {
   margin: 0;
   font-size: clamp(20px, 4vw, 28px);
   color: white;
+  
 }
 
 .user-info {
@@ -437,6 +440,19 @@ export default {
 
   .notification {
     padding: 12px 16px;
+  }
+}
+
+.logo {
+  display: none; /* Hide by default */
+  width: 200px; /* Adjust width as needed */
+  height: 80px; /* Set height to crop the image further */
+  
+}
+
+@media (min-width: 768px) {
+  .logo {
+    display: block; /* Show on desktop */
   }
 }
 </style>
