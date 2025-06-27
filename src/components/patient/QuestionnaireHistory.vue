@@ -55,8 +55,9 @@
                   v-if="questionnaire.status === 'signed'"
                   @click="downloadPDF(questionnaire)"
                   class="btn-outline btn-sm"
+                  :disabled="pdfGenerating === questionnaire.id"
                 >
-                  📄 PDF
+                  {{ pdfGenerating === questionnaire.id ? '⏳' : '📄' }} PDF
                 </button>
                 <button 
                   v-if="questionnaire.status === 'draft'"
@@ -131,7 +132,8 @@ export default {
       loading: false,
       error: null,
       expandedId: null,
-      deletingId: null
+      deletingId: null,
+      pdfGenerating: null
     }
   },
   computed: {
@@ -212,6 +214,326 @@ export default {
       }
     },
 
+    async downloadPDF(questionnaire) {
+      try {
+        // Check if html2pdf is available
+        if (!window.html2pdf) {
+          alert('Eroare: Librăria PDF nu este disponibilă. Vă rugăm să reîncărcați pagina.')
+          return
+        }
+
+        // Set loading state
+        this.pdfGenerating = questionnaire.id
+        console.log('Se generează PDF-ul...')
+        
+        // Create a temporary element with questionnaire details
+        const tempDiv = document.createElement('div')
+        tempDiv.style.cssText = `
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 794px;
+          min-height: 1123px;
+          padding: 20px;
+          font-family: Arial, sans-serif;
+          background-color: white;
+          color: black;
+          box-sizing: border-box;
+          z-index: -1;
+        `
+        
+        // Build the PDF content with simplified HTML
+        const pdfContent = this.buildSimplePDFContent(questionnaire)
+        tempDiv.innerHTML = pdfContent
+        
+        // Add to DOM
+        document.body.appendChild(tempDiv)
+
+        // Wait for DOM to render
+        await new Promise(resolve => setTimeout(resolve, 500))
+
+        // Simplified PDF options
+        const options = {
+          margin: 0.5,
+          filename: `Chestionar_${questionnaire.tip_chestionar}_${questionnaire.completat_la ? new Date(questionnaire.completat_la).toLocaleDateString('ro-RO').replace(/\./g, '_') : 'necunoscut'}.pdf`,
+          image: { 
+            type: 'jpeg', 
+            quality: 0.92 
+          },
+          html2canvas: { 
+            scale: 2,
+            useCORS: true,
+            allowTaint: true,
+            width: 794,
+            height: 1123,
+            scrollX: 0,
+            scrollY: 0
+          },
+          jsPDF: { 
+            unit: 'px', 
+            format: [794, 1123], 
+            orientation: 'portrait'
+          }
+        }
+
+        console.log('Starting PDF generation...')
+        
+        // Generate PDF
+        await window.html2pdf().set(options).from(tempDiv).save()
+        
+        // Clean up
+        document.body.removeChild(tempDiv)
+        
+        console.log('PDF generat cu succes!')
+        alert('PDF-ul a fost generat cu succes! 📄')
+        
+      } catch (error) {
+        console.error('Error generating PDF:', error)
+        alert('Eroare la generarea PDF-ului: ' + error.message)
+        
+        // Clean up on error
+        const tempElements = document.querySelectorAll('div[style*="z-index: -1"]')
+        tempElements.forEach(el => el.remove())
+      } finally {
+        this.pdfGenerating = null
+      }
+    },
+
+    // Simplified PDF content
+    buildSimplePDFContent(questionnaire) {
+      const responses = questionnaire.data_chestionar || {}
+      const completedDate = questionnaire.completat_la ? this.formatDate(questionnaire.completat_la) : 'Necunoscut'
+      const signedDate = questionnaire.semnat_la ? this.formatDate(questionnaire.semnat_la) : 'Nu este semnat'
+      
+      return `
+        <div>
+          <h1 style="text-align: center; color: #333; margin-bottom: 10px; font-size: 24px;">📋 Chestionar Medical</h1>
+          <h2 style="text-align: center; color: #666; margin-bottom: 20px; font-size: 18px;">
+            ${questionnaire.tip_chestionar === 'minor' ? 'Pentru Minori' : 'Pentru Adulți'}
+          </h2>
+          <hr style="border: 1px solid #ccc; margin-bottom: 20px;">
+          
+          <h3 style="color: #333; margin-bottom: 15px;">📋 Informații Generale</h3>
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd; background: #f9f9f9; font-weight: bold;">Data completării:</td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${completedDate}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd; background: #f9f9f9; font-weight: bold;">Data semnării:</td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${signedDate}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd; background: #f9f9f9; font-weight: bold;">Status:</td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${this.getStatusLabel(questionnaire.status)}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd; background: #f9f9f9; font-weight: bold;">Tip chestionar:</td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${questionnaire.tip_chestionar === 'minor' ? 'Minor' : 'Adult'}</td>
+            </tr>
+          </table>
+
+          <h3 style="color: #333; margin-bottom: 15px;">🏥 Răspunsuri Medicale</h3>
+          ${this.formatSimpleResponsesForPDF(responses)}
+          
+          <hr style="border: 1px solid #ccc; margin: 30px 0 10px 0;">
+          <p style="text-align: center; color: #666; font-size: 12px; margin: 0;">
+            Document generat la: ${new Date().toLocaleDateString('ro-RO')}<br>
+            © ${new Date().getFullYear()} - Sistem Digital Interactiv pentru Colectarea Datelor Medicale
+          </p>
+        </div>
+      `
+    },
+
+    // Simplified responses formatting
+    formatSimpleResponsesForPDF(responses) {
+      if (!responses || Object.keys(responses).length === 0) {
+        return '<p style="text-align: center; color: #666; font-style: italic; padding: 20px;">Nu există răspunsuri înregistrate.</p>'
+      }
+
+      let html = '<table style="width: 100%; border-collapse: collapse;">'
+      let rowCount = 0
+      
+      Object.keys(responses).forEach(key => {
+        const value = responses[key]
+        if (value !== null && value !== undefined && value.toString().trim() !== '') {
+          const bgColor = rowCount % 2 === 0 ? '#f9f9f9' : 'white'
+          html += `
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd; background: ${bgColor}; font-weight: bold; width: 40%;">
+                ${this.formatQuestionLabel(key)}
+              </td>
+              <td style="padding: 8px; border: 1px solid #ddd; background: ${bgColor};">
+                ${this.formatResponseValue(value)}
+              </td>
+            </tr>
+          `
+          rowCount++
+        }
+      })
+      
+      html += '</table>'
+      
+      if (rowCount === 0) {
+        return '<p style="text-align: center; color: #666; font-style: italic; padding: 20px;">Nu există răspunsuri relevante pentru afișare.</p>'
+      }
+      
+      return html
+    },
+
+    // Build PDF content
+    buildPDFContent(questionnaire) {
+      const responses = questionnaire.data_chestionar || {}
+      const completedDate = questionnaire.completat_la ? this.formatDate(questionnaire.completat_la) : 'Necunoscut'
+      const signedDate = questionnaire.semnat_la ? this.formatDate(questionnaire.semnat_la) : 'Nu este semnat'
+      
+      console.log('Building PDF content for questionnaire:', questionnaire.id)
+      console.log('Responses found:', Object.keys(responses).length)
+      
+      // Simple fallback content if no responses
+      if (!responses || Object.keys(responses).length === 0) {
+        return `
+          <div style="padding: 20px; font-family: Arial, sans-serif;">
+            <h1 style="color: #333; text-align: center;">📋 Chestionar Medical</h1>
+            <h2 style="color: #666; text-align: center;">${questionnaire.tip_chestionar === 'minor' ? 'Pentru Minori' : 'Pentru Adulți'}</h2>
+            
+            <div style="margin: 30px 0; padding: 20px; background: #f9f9f9; border-radius: 8px;">
+              <h3>Informații Generale</h3>
+              <p><strong>Data completării:</strong> ${completedDate}</p>
+              <p><strong>Data semnării:</strong> ${signedDate}</p>
+              <p><strong>Status:</strong> ${this.getStatusLabel(questionnaire.status)}</p>
+              <p><strong>Tip chestionar:</strong> ${questionnaire.tip_chestionar === 'minor' ? 'Minor' : 'Adult'}</p>
+            </div>
+            
+            <div style="margin: 30px 0; padding: 20px; background: #fff3cd; border-radius: 8px;">
+              <h3>⚠️ Observație</h3>
+              <p>Nu au fost găsite răspunsuri pentru acest chestionar sau datele nu sunt disponibile.</p>
+            </div>
+            
+            <div style="margin-top: 40px; text-align: center; color: #666; font-size: 12px;">
+              <p>Document generat la: ${new Date().toLocaleDateString('ro-RO')}</p>
+            </div>
+          </div>
+        `
+      }
+      
+      return `
+        <div style="padding: 20px; font-family: Arial, sans-serif; line-height: 1.6;">
+          <!-- Header -->
+          <div style="text-align: center; margin-bottom: 30px; border-bottom: 2px solid #4f46e5; padding-bottom: 20px;">
+            <h1 style="margin: 0 0 10px 0; color: #1f2937; font-size: 24px;">📋 Chestionar Medical</h1>
+            <h2 style="margin: 0 0 15px 0; color: #4f46e5; font-size: 18px;">
+              ${questionnaire.tip_chestionar === 'minor' ? 'Pentru Minori' : 'Pentru Adulți'}
+            </h2>
+            <p style="margin: 0; color: #6b7280; font-size: 12px;">
+              Generat la data: ${new Date().toLocaleDateString('ro-RO')}
+            </p>
+          </div>
+
+          <!-- Patient Info -->
+          <div style="margin-bottom: 25px; padding: 15px; background-color: #f8fafc; border-radius: 6px;">
+            <h3 style="margin: 0 0 15px 0; color: #374151; font-size: 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">
+              📋 Informații Generale
+            </h3>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 5px 10px; border: 1px solid #e5e7eb;"><strong>Data completării:</strong></td>
+                <td style="padding: 5px 10px; border: 1px solid #e5e7eb;">${completedDate}</td>
+              </tr>
+              <tr>
+                <td style="padding: 5px 10px; border: 1px solid #e5e7eb;"><strong>Data semnării:</strong></td>
+                <td style="padding: 5px 10px; border: 1px solid #e5e7eb;">${signedDate}</td>
+              </tr>
+              <tr>
+                <td style="padding: 5px 10px; border: 1px solid #e5e7eb;"><strong>Status:</strong></td>
+                <td style="padding: 5px 10px; border: 1px solid #e5e7eb;">${this.getStatusLabel(questionnaire.status)}</td>
+              </tr>
+              <tr>
+                <td style="padding: 5px 10px; border: 1px solid #e5e7eb;"><strong>Tip chestionar:</strong></td>
+                <td style="padding: 5px 10px; border: 1px solid #e5e7eb;">${questionnaire.tip_chestionar === 'minor' ? 'Minor' : 'Adult'}</td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- Medical Responses -->
+          <div style="margin-bottom: 25px;">
+            <h3 style="margin: 0 0 15px 0; color: #374151; font-size: 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">
+              🏥 Răspunsuri Medicale
+            </h3>
+            ${this.formatMedicalResponsesForPDF(responses)}
+          </div>
+
+          <!-- Footer -->
+          <div style="margin-top: 30px; padding-top: 15px; border-top: 1px solid #e5e7eb; text-align: center; color: #6b7280; font-size: 10px;">
+            <p style="margin: 0;">Document generat automat de sistemul de management al clinicii</p>
+            <p style="margin: 5px 0 0 0;">© ${new Date().getFullYear()} - Sistem Digital Interactiv pentru Colectarea Datelor Medicale</p>
+          </div>
+        </div>
+      `
+    },
+
+    // Format medical responses for PDF
+    formatMedicalResponsesForPDF(responses) {
+      console.log('Formatting responses for PDF:', responses)
+      
+      if (!responses || Object.keys(responses).length === 0) {
+        return '<p style="text-align: center; color: #6b7280; font-style: italic; padding: 20px;">Nu există răspunsuri înregistrate.</p>'
+      }
+
+      let html = '<div style="margin: 10px 0;">'
+      let hasContent = false
+      
+      // First, show all available responses
+      Object.keys(responses).forEach(key => {
+        const value = responses[key]
+        if (value !== null && value !== undefined && value.toString().trim() !== '') {
+          hasContent = true
+          html += `
+            <div style="margin-bottom: 15px; padding: 10px; border: 1px solid #e5e7eb; border-radius: 4px; background: white;">
+              <div style="font-weight: bold; color: #374151; margin-bottom: 5px;">
+                📝 ${this.formatQuestionLabel(key)}
+              </div>
+              <div style="color: #1f2937;">
+                ${this.formatResponseValue(value)}
+              </div>
+            </div>
+          `
+        }
+      })
+      
+      // If no content was added, show all responses for debugging
+      if (!hasContent) {
+        html += '<div style="padding: 15px; background: #fff3cd; border-radius: 4px;">'
+        html += '<h4>🔍 Debug - Toate răspunsurile disponibile:</h4>'
+        
+        if (Object.keys(responses).length === 0) {
+          html += '<p>Nu există chei în obiectul responses.</p>'
+        } else {
+          Object.keys(responses).forEach(key => {
+            const value = responses[key]
+            html += `<p><strong>${key}:</strong> ${value} (tip: ${typeof value})</p>`
+          })
+        }
+        html += '</div>'
+      }
+      
+      html += '</div>'
+      
+      console.log('Generated HTML length:', html.length)
+      return html
+    },
+
+    // Format response value
+    formatResponseValue(value) {
+      if (typeof value === 'boolean') {
+        return value ? 'Da' : 'Nu'
+      }
+      if (typeof value === 'string') {
+        return value.length > 100 ? value.substring(0, 100) + '...' : value
+      }
+      return value.toString()
+    },
+
     formatDate(dateString) {
       if (!dateString) return 'N/A'
       return new Date(dateString).toLocaleDateString('ro-RO', {
@@ -278,11 +600,6 @@ export default {
       } else {
         this.expandedId = questionnaire.id
       }
-    },
-
-    async downloadPDF(questionnaire) {
-      // TODO: Implementare generare PDF
-      alert('Funcționalitatea de export PDF va fi disponibilă în curând.')
     },
 
     startNewQuestionnaire() {

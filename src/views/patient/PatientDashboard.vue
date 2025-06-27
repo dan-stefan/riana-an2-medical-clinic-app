@@ -45,6 +45,14 @@
         </div>
 
         <div class="action-card">
+          <h3>Istoric Programări</h3>
+          <p>Vezi toate programările tale - trecute și viitoare</p>
+          <button @click="viewAppointmentHistory" class="action-btn">
+            Vezi Istoricul
+          </button>
+        </div>
+
+        <div class="action-card">
           <h3>Profilul Meu</h3>
           <p>Actualizează informațiile personale</p>
           <button @click="editProfile" class="action-btn">
@@ -98,6 +106,14 @@
       @doctor-selected="onDoctorSelected"
     />
 
+    <!-- Modal pentru istoric programări -->
+    <ProgramariHistory 
+      :show="showProgramariHistory"
+      @close="showProgramariHistory = false"
+      @appointment-selected="onAppointmentSelected"
+      @reschedule="onRescheduleAppointment"
+    />
+
     <!-- Modal pentru detalii clinică -->
     <Detalii 
       :show="showDetalii"
@@ -128,6 +144,7 @@ import QuestionnaireModal from '@/components/patient/QuestionnaireModal.vue'
 import ProfileEditor from '@/components/patient/ProfileEditor.vue'
 import QuestionnaireHistory from '@/components/patient/QuestionnaireHistory.vue'
 import Programari from '@/components/patient/Programari.vue'
+import ProgramariHistory from '@/components/patient/ProgramariHistory.vue'
 import Detalii from '@/components/patient/Detalii.vue'
 
 export default {
@@ -138,6 +155,7 @@ export default {
     ProfileEditor,
     QuestionnaireHistory,
     Programari,
+    ProgramariHistory,
     Detalii
   },
   data() {
@@ -146,6 +164,7 @@ export default {
       showProfileEditor: false,
       showQuestionnaireHistory: false,
       showProgramari: false,
+      showProgramariHistory: false,
       showDetalii: false,
       notifications: [],
       notificationId: 0
@@ -214,6 +233,10 @@ export default {
       this.showProgramari = true
     },
 
+    viewAppointmentHistory() {
+      this.showProgramariHistory = true
+    },
+
     editProfile() {
       this.showProfileEditor = true
     },
@@ -230,6 +253,21 @@ export default {
     onDoctorSelected(doctor) {
       this.showNotification(`Doctor selectat: ${doctor.nume_complet}`, 'info')
       console.log('Doctor selected:', doctor)
+    },
+
+    onAppointmentSelected(appointment) {
+      this.showNotification(`Programare selectată: ${appointment.servicii?.nume} cu ${appointment.user_profiles?.nume_complet}`, 'info')
+      console.log('Appointment selected:', appointment)
+    },
+
+    onRescheduleAppointment(appointment) {
+      this.showNotification(`Reprogramare pentru: ${appointment.servicii?.nume}`, 'info')
+      console.log('Reschedule appointment:', appointment)
+      // Here you could open the Programari modal with pre-filled data
+      this.showProgramariHistory = false
+      setTimeout(() => {
+        this.showProgramari = true
+      }, 300)
     },
 
     onDraftDeleted(deletedDraft) {

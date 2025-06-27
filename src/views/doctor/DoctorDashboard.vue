@@ -57,6 +57,12 @@
       @close="showReports = false"
     />
 
+    <!-- Modal pentru programări -->
+    <AppointmentsModal 
+      :show="showAppointments"
+      @close="showAppointments = false"
+    />
+
     <!-- Notificări Toast -->
     <div v-if="notifications.length > 0" class="notifications-container">
       <div 
@@ -78,19 +84,22 @@ import { useAuthStore } from '@/stores/auth.js'
 import Pacienti from '@/components/doctor/Pacienti.vue'
 import PatientDetails from '@/components/doctor/PatientDetails.vue'
 import Rapoarte from '@/components/doctor/Rapoarte.vue'
+import AppointmentsModal from '@/components/doctor/AppointmentsModal.vue'
 
 export default {
   name: 'DoctorDashboard',
   components: {
     Pacienti,
     PatientDetails,
-    Rapoarte
+    Rapoarte,
+    AppointmentsModal
   },
   data() {
     return {
       showPatients: false,
       showPatientDetails: false,
       showReports: false,
+      showAppointments: false,
       selectedPatient: null,
       notifications: [],
       notificationId: 0
@@ -118,7 +127,7 @@ export default {
     },
 
     viewAppointments() {
-      this.showNotification('Funcționalitatea programărilor va fi disponibilă în curând! 🗓️', 'info')
+      this.showAppointments = true
     },
 
     onPatientSelected(patient) {
