@@ -114,7 +114,7 @@ export default {
     async logout() {
       const success = await this.authStore.signOut()
       if (success) {
-        this.$router.push('/auth')
+        this.$router.push('/')
       }
     },
 
